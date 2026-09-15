@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>No-Code Adventure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;600;700;800&display=swap">
+</head>
+<body>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#120C2A;
+  --surf:#1E1540;
+  --panel:#251B4D;
+  --panel2:#2E2260;
+  --border:#332870;
+  --c1:#1A1238;--c2:#1E1542;
+  --wall:#3A2F6A;
+  --cs:68px;
+
+  --move:#FF7043;--turn:#26C6DA;
+  --cond:#FFCA28;--loop:#66BB6A;
+  --all:#AB47BC;--boss:#EF5350;
+  --star:#FFD700;--ok:#66BB6A;--err:#EF5350;
+  --txt:#EDE8FF;--dim:#8B7FB5;
+  --r:10px;--rs:6px;
+}
+
+html,body{height:100%;background:var(--bg);color:var(--txt);
+  font-family:'Nunito',system-ui,sans-serif;overflow-x:hidden;overflow-y:hidden}
+
+/* ── SHELL ── */
+#app{height:100vh;height:100dvh;display:grid;grid-template-columns:220px 1fr;overflow:hidden}
+
+/* ── SIDEBAR ── */
+aside{background:var(--surf);border-right:1px solid var(--border);
+  padding:18px 12px;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.logo{font-family:'Press Start 2P',monospace;font-size:9px;line-height:2.2;
+  color:var(--move);text-align:center;padding-bottom:12px;border-bottom:1px solid var(--border)}
+
+.lcard{background:var(--panel);border:2px solid transparent;border-radius:var(--r);
+  padding:10px 11px;cursor:pointer;transition:.18s}
+.lcard:hover{border-color:var(--border)}
+.lcard.active{border-color:var(--move);background:var(--panel2)}
+.lcard.locked{opacity:.35;cursor:not-allowed;pointer-events:none}
+.lnum{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--dim);margin-bottom:3px}
+.lname{font-size:11px;font-weight:800;margin-bottom:5px;line-height:1.4}
+.ltag{display:inline-block;font-size:8px;font-weight:700;padding:2px 7px;border-radius:20px;color:#fff}
+
+.tip{background:var(--panel);border-radius:var(--r);padding:11px;
+  font-size:11px;line-height:1.7;color:var(--dim);margin-top:auto;flex-shrink:0}
+.tip strong{display:block;color:var(--star);margin-bottom:4px;font-size:10px}
+
+/* ── MAIN ── */
+#main{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+
+header{background:var(--surf);border-bottom:1px solid var(--border);
+  padding:10px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+#lvlt{font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.6}
+#lvls{font-size:12px;color:var(--dim);flex:1}
+.hbtns{display:flex;gap:8px}
+
+.btn{border:none;border-radius:var(--rs);padding:10px 16px;
+  font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;
+  cursor:pointer;transition:.12s;min-height:44px;touch-action:manipulation}
+.btn:hover{transform:translateY(-1px)}.btn:active{transform:none}
+.btn-run{background:var(--ok);color:#fff;padding:10px 22px}
+.btn-rst{background:var(--panel2);color:var(--txt)}
+.btn-clr{background:transparent;color:var(--dim);border:1px solid var(--border)}
+
+/* ── WORKSPACE ── */
+#ws{flex:1;display:grid;grid-template-columns:1fr 280px;min-height:0;overflow:hidden}
+
+/* Grid section */
+#ga{display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:18px;gap:14px;overflow:auto}
+#grid{display:grid;position:relative;border:2px solid var(--border);
+  border-radius:var(--rs);overflow:hidden;
+  box-shadow:0 8px 40px rgba(0,0,0,.5),0 0 80px rgba(80,40,180,.18);flex-shrink:0}
+.cell{width:var(--cs);height:var(--cs);display:flex;align-items:center;
+  justify-content:center;font-size:26px;border:1px solid var(--border);transition:background .25s}
+.cell.e0{background:var(--c1)}.cell.e1{background:var(--c2)}
+.cell.wall{background:var(--wall)!important}
+.cell.wall::after{content:'🌳';font-size:24px;pointer-events:none}
+.cell.goal::after{content:'⭐';font-size:24px;
+  filter:drop-shadow(0 0 8px gold);animation:glow 1.4s ease-in-out infinite;pointer-events:none}
+.cell.lit{background:#2A1E50!important}
+@keyframes glow{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+
+/* Player */
+#pl{position:absolute;display:flex;align-items:center;justify-content:center;
+  pointer-events:none;z-index:10;
+  transition:top .3s cubic-bezier(.4,0,.2,1),left .3s cubic-bezier(.4,0,.2,1)}
+#pli{font-size:28px;transition:transform .26s ease;
+  filter:drop-shadow(0 0 8px rgba(255,120,60,.7))}
+
+/* Status */
+#msg{font-family:'Press Start 2P',monospace;font-size:7px;text-align:center;
+  color:var(--dim);min-height:20px;line-height:1.8;text-wrap:balance;padding:0 8px}
+
+/* Progress dots */
+#progress{display:flex;gap:6px;align-items:center}
+.pdot{width:10px;height:10px;border-radius:50%;background:var(--panel2);
+  border:1px solid var(--border);transition:.2s}
+.pdot.done{background:var(--star)}
+.pdot.cur{background:var(--move);box-shadow:0 0 6px var(--move)}
+
+/* Program panel */
+#pp{background:var(--surf);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden}
+#phdr{padding:10px 13px;font-family:'Press Start 2P',monospace;font-size:7px;
+  color:var(--dim);border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center}
+#pcnt{color:var(--txt);font-size:7px}
+#pbody{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:4px;min-height:0}
+.pempty{text-align:center;padding:24px 12px;color:var(--dim);font-size:11px;line-height:2}
+.pempty span{font-size:26px;display:block;margin-bottom:8px}
+
+/* Program blocks */
+.pb{border-radius:var(--rs);padding:8px 10px;font-size:11px;font-weight:700;
+  display:flex;align-items:center;gap:7px;position:relative;user-select:none}
+.pb .del{margin-left:auto;opacity:0;font-size:16px;color:rgba(255,255,255,.55);
+  cursor:pointer;line-height:1;flex-shrink:0;background:none;border:none;padding:2px 4px;
+  min-width:24px;min-height:24px;display:flex;align-items:center;justify-content:center}
+.pb:hover .del{opacity:1}
+.pb-move{background:var(--move);color:#fff}
+.pb-tl,.pb-tr{background:var(--turn);color:#0C3840}
+.pb-ifc{background:var(--cond);color:#3A2800;flex-direction:column;align-items:flex-start;gap:5px}
+.pb-rpt{background:var(--loop);color:#0D2E0D;flex-direction:column;align-items:flex-start;gap:5px}
+.pbhdr{display:flex;align-items:center;gap:7px;width:100%}
+
+/* Nested zone */
+.nz{width:100%;background:rgba(0,0,0,.2);border-radius:5px;padding:5px;
+  display:flex;flex-direction:column;gap:3px;min-height:34px;
+  border:2px dashed rgba(0,0,0,.25);cursor:pointer;transition:.15s}
+.nz.ctx{border-color:rgba(255,255,255,.35);background:rgba(0,0,0,.32);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.12);cursor:default}
+.ne{font-size:9px;font-weight:600;opacity:.55;text-align:center;padding:2px}
+.ns{background:rgba(255,255,255,.18);border-radius:4px;padding:4px 8px;
+  font-size:10px;font-weight:700;display:flex;align-items:center;gap:5px;cursor:pointer;
+  min-height:28px;touch-action:manipulation}
+.ns:hover{background:rgba(255,255,255,.1)}
+.nz-exit{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.3);
+  border-radius:4px;padding:5px 10px;font-size:10px;font-weight:700;color:inherit;
+  cursor:pointer;width:100%;margin-top:3px;touch-action:manipulation;
+  font-family:'Nunito',sans-serif}
+.nz-exit:hover{background:rgba(255,255,255,.35)}
+/* palette context indicator */
+#pal-ctx{display:none;background:#1a1238;border:1px solid var(--border);
+  border-radius:var(--rs);padding:5px 10px;font-size:10px;font-weight:700;
+  color:var(--star);align-items:center;gap:6px;white-space:nowrap}
+#pal-ctx.show{display:flex}
+#pal-ctx button{background:rgba(255,255,255,.15);border:none;border-radius:4px;
+  padding:3px 8px;color:var(--txt);font-size:10px;font-weight:700;cursor:pointer;
+  font-family:'Nunito',sans-serif;touch-action:manipulation}
+#pal-ctx button:hover{background:rgba(255,255,255,.28)}
+.rcnt{display:flex;align-items:center;gap:6px;font-size:11px}
+.cb{background:rgba(0,0,0,.22);border:none;border-radius:4px;
+  width:24px;height:24px;cursor:pointer;color:inherit;font-weight:700;font-size:14px;
+  display:inline-flex;align-items:center;justify-content:center;touch-action:manipulation}
+.running{box-shadow:0 0 0 2px #fff,0 0 14px rgba(255,255,255,.4)!important;transform:scale(1.02)}
+
+/* Palette */
+#pal{background:var(--panel);border-top:1px solid var(--border);
+  padding:10px 18px;padding-bottom:max(10px,env(safe-area-inset-bottom));
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;min-height:70px}
+#pallbl{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--dim);white-space:nowrap}
+#palb{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pb2{border:none;border-radius:var(--rs);padding:11px 16px;
+  font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;
+  cursor:pointer;display:flex;align-items:center;gap:6px;
+  box-shadow:0 3px 0 rgba(0,0,0,.35);transition:.12s;
+  min-height:48px;touch-action:manipulation}
+.pb2:hover{transform:translateY(-2px);box-shadow:0 5px 0 rgba(0,0,0,.35)}
+.pb2:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.pm{background:var(--move);color:#fff}
+.pt{background:var(--turn);color:#0C3840}
+.pc{background:var(--cond);color:#3A2800}
+.pl{background:var(--loop);color:#0D2E0D}
+
+/* Win overlay */
+#win{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;
+  align-items:center;justify-content:center;z-index:99;
+  opacity:0;pointer-events:none;transition:opacity .38s}
+#win.show{opacity:1;pointer-events:all}
+#wbox{background:var(--surf);border:2px solid var(--star);border-radius:20px;
+  padding:36px 32px;text-align:center;max-width:360px;width:90%;
+  box-shadow:0 0 60px rgba(255,215,0,.22)}
+#wico{font-size:54px;display:block;margin-bottom:12px}
+#wttl{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--star);
+  margin-bottom:10px;line-height:1.7;text-wrap:balance}
+#wmsg{font-size:13px;color:var(--dim);margin-bottom:18px;line-height:1.7}
+#wst{font-size:32px;margin-bottom:20px}
+.wbtns{display:flex;gap:10px;justify-content:center}
+.bn{background:var(--star);color:#3D2800;padding:11px 22px;font-size:13px;
+  border-radius:var(--rs);min-height:48px}
+
+/* Concept badge panel */
+#concepts{display:flex;gap:6px;flex-wrap:wrap;padding:6px 18px;
+  border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0}
+.cbadge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;
+  display:flex;align-items:center;gap:4px}
+
+/* Animations */
+@keyframes shake{0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-6px) rotate(-3deg)}75%{transform:translateX(6px) rotate(3deg)}}
+@keyframes pop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.shake{animation:shake .42s ease}
+.pop{animation:pop .32s ease}
+@keyframes trail{from{opacity:.6}to{opacity:0}}
+
+/* iPad / Tablet */
+@media(max-width:1024px){
+  :root{--cs:62px}
+  #app{grid-template-columns:190px 1fr}
+}
+@media(max-width:768px){
+  #app{grid-template-columns:1fr}
+  aside{display:none}
+  #ws{grid-template-columns:1fr;grid-template-rows:auto 190px}
+  :root{--cs:52px}
+  .cell{font-size:20px}
+  #pli{font-size:22px}
+  #ga{padding:10px;gap:8px}
+  #pal{padding:8px 12px;padding-bottom:max(8px,env(safe-area-inset-bottom));min-height:64px}
+  .pb2{padding:10px 12px;font-size:12px;min-height:46px}
+}
+@media(max-width:420px){
+  :root{--cs:44px}
+  .pb2{padding:8px 10px;font-size:11px}
+  header{padding:8px 12px}
+  .btn{padding:8px 12px;font-size:12px;min-height:40px}
+}
+</style>
+
+<div id="app">
+<aside>
+  <div class="logo">🤖 NO-CODE<br>ADVENTURE</div>
+  <div id="llist"></div>
+  <div class="tip"><strong>💡 คำใบ้</strong><div id="hint">เริ่มเล่นเลย!</div></div>
+</aside>
+
+<div id="main">
+  <header>
+    <div>
+      <div id="lvlt">ด่านที่ 1</div>
+      <div id="lvls">เดินตรง</div>
+    </div>
+    <div id="progress"></div>
+    <div class="hbtns">
+      <button class="btn btn-clr" onclick="clearProg()">🗑</button>
+      <button class="btn btn-rst" onclick="resetPos()">↺ รีเซ็ต</button>
+      <button class="btn btn-run" id="runBtn" onclick="runProg()">▶ รัน!</button>
+    </div>
+  </header>
+
+  <div id="concepts"></div>
+
+  <div id="ws">
+    <div id="ga">
+      <div id="grid"></div>
+      <div id="msg">ใส่คำสั่งแล้วกด ▶ รัน!</div>
+    </div>
+    <div id="pp">
+      <div id="phdr"><span>โปรแกรม</span><span id="pcnt">0 บล็อก</span></div>
+      <div id="pbody"></div>
+    </div>
+  </div>
+
+  <div id="pal">
+    <span id="pallbl">คำสั่ง:</span>
+    <div id="pal-ctx">📦 เพิ่มใน: <span id="pal-ctx-lbl">บล็อก</span> <button onclick="setCtx(null)">✓ ออก</button></div>
+    <div id="palb"></div>
+  </div>
+</div>
+</div>
+
+<div id="win">
+  <div id="wbox">
+    <span id="wico">🎉</span>
+    <h2 id="wttl">ยอดเยี่ยม!</h2>
+    <p id="wmsg">คุณผ่านด่านแล้ว!</p>
+    <div id="wst">⭐⭐⭐</div>
+    <div class="wbtns">
+      <button class="btn btn-rst" onclick="closeWin()">เล่นอีกครั้ง</button>
+      <button class="btn bn" id="nxt" onclick="nextLvl()">ด่านถัดไป →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  LEVELS  (10 ด่าน)
+// ═══════════════════════════════════════════
+const LV = [
+  // 1 – Sequence: เดินตรง
+  { id:1, title:'ด่านที่ 1', name:'เดินตรง',
+    concept:'Sequence', color:'#FF7043', icon:'📋',
+    size:4, s:{x:0,y:1,d:'r'}, g:{x:3,y:1}, w:[],
+    bl:['move','tl','tr'], max:10,
+    hint:'💡 กด "เดินหน้า" 3 ครั้ง แล้วกด ▶ รัน ได้เลย!' },
+
+  // 2 – Sequence: เลี้ยวหนึ่งครั้ง
+  { id:2, title:'ด่านที่ 2', name:'เลี้ยวหนึ่งครั้ง',
+    concept:'Sequence', color:'#FF7043', icon:'📋',
+    size:4, s:{x:0,y:0,d:'r'}, g:{x:3,y:3}, w:[],
+    bl:['move','tl','tr'], max:12,
+    hint:'💡 เดินตรง 3 ก้าว → เลี้ยวขวา → เดินลงอีก 3 ก้าว' },
+
+  // 3 – Sequence: รูปตัว L
+  { id:3, title:'ด่านที่ 3', name:'เส้นทางรูปตัว L',
+    concept:'Sequence', color:'#FF7043', icon:'📋',
+    size:5, s:{x:0,y:0,d:'r'}, g:{x:4,y:4}, w:[],
+    bl:['move','tl','tr'], max:14,
+    hint:'💡 เดินขวา 4 ก้าว → เลี้ยวขวา → เดินลง 4 ก้าว' },
+
+  // 4 – Condition: ต้นไม้กีดขวาง
+  { id:4, title:'ด่านที่ 4', name:'ต้นไม้กีดขวาง!',
+    concept:'Condition', color:'#FFCA28', icon:'❓',
+    size:5, s:{x:0,y:2,d:'r'}, g:{x:4,y:2}, w:[{x:2,y:2}],
+    bl:['move','tl','tr','ifc'], max:14,
+    hint:'💡 "ถ้าทางว่าง" = เช็คก่อนเดิน ถ้ามีต้นไม้จะข้ามไปเลย\n→ กด "ถ้าทางว่าง" แล้วแตะใน กล่องสีเหลือง แล้วกด "เดินหน้า"' },
+
+  // 5 – Condition: กำแพงสองต้น
+  { id:5, title:'ด่านที่ 5', name:'อ้อมต้นไม้',
+    concept:'Condition', color:'#FFCA28', icon:'❓',
+    size:5, s:{x:0,y:0,d:'r'}, g:{x:4,y:4}, w:[{x:2,y:2}],
+    bl:['move','tl','tr','ifc'], max:16,
+    hint:'💡 เดินขวา 2 ก้าว → เลี้ยวลง → ใช้ "ถ้าทางว่าง→เดิน" ตรงต้นไม้ → อ้อม → ไปหาดาว!' },
+
+  // 6 – Loop: บันไดซ้ำ x4
+  { id:6, title:'ด่านที่ 6', name:'บันไดซ้ำ x4',
+    concept:'Loop', color:'#66BB6A', icon:'🔁',
+    size:5, s:{x:0,y:4,d:'r'}, g:{x:4,y:0}, w:[],
+    bl:['move','tl','tr','rpt'], max:12,
+    hint:'💡 กด "ทำซ้ำ" ตั้งเป็น 4 ครั้ง → แตะในกล่องสีเขียว → ใส่: เดิน, เลี้ยวซ้าย, เดิน, เลี้ยวขวา' },
+
+  // 7 – Loop: บันไดซ้ำ x5
+  { id:7, title:'ด่านที่ 7', name:'บันไดใหญ่ x5',
+    concept:'Loop', color:'#66BB6A', icon:'🔁',
+    size:6, s:{x:0,y:5,d:'r'}, g:{x:5,y:0}, w:[],
+    bl:['move','tl','tr','rpt'], max:12,
+    hint:'💡 เหมือนด่าน 6 แต่ใหญ่กว่า! เปลี่ยน "ทำซ้ำ" เป็น 5 ครั้ง' },
+
+  // 8 – All: กำแพงยาว
+  { id:8, title:'ด่านที่ 8', name:'กำแพงยาว!',
+    concept:'All', color:'#AB47BC', icon:'⚡',
+    size:5, s:{x:0,y:2,d:'r'}, g:{x:4,y:2},
+    w:[{x:2,y:0},{x:2,y:1},{x:2,y:2},{x:2,y:3}],
+    bl:['move','tl','tr','ifc','rpt'], max:16,
+    hint:'💡 กำแพงยาว 4 ช่อง ช่องว่างอยู่ที่แถวล่างสุด ต้องอ้อมลงไปแล้วข้ามไป!' },
+
+  // 9 – All: ต้นไม้แนวทแยง
+  { id:9, title:'ด่านที่ 9', name:'ต้นไม้แนวทแยง',
+    concept:'All', color:'#AB47BC', icon:'⚡',
+    size:6, s:{x:0,y:0,d:'r'}, g:{x:5,y:5},
+    w:[{x:2,y:2},{x:3,y:3},{x:4,y:4}],
+    bl:['move','tl','tr','ifc','rpt'], max:20,
+    hint:'💡 ต้นไม้เรียงแนวทแยง ใช้ "ถ้าทางว่าง" ตรวจแต่ละจุด แล้ว อ้อมทีละก้าว' },
+
+  // 10 – Boss: กำแพงตัดกลาง
+  { id:10, title:'ด่านที่ 10 🔥', name:'บอสด่านสุดท้าย!',
+    concept:'All', color:'#EF5350', icon:'🔥',
+    size:7, s:{x:0,y:3,d:'r'}, g:{x:6,y:3},
+    w:[{x:3,y:1},{x:3,y:2},{x:3,y:3},{x:3,y:4},{x:3,y:5}],
+    bl:['move','tl','tr','ifc','rpt'], max:20,
+    hint:'💡 กำแพงตัดกลาง! ต้องอ้อมขึ้นบน ผ่านแถวที่ 0 แล้วลงมาที่เป้าหมาย ใช้ทำซ้ำช่วยประหยัดบล็อก!' }
+];
+
+// ─── Direction helpers ───
+const ROT={r:'d',d:'l',l:'u',u:'r'};   // turn right
+const ROL={r:'u',u:'l',l:'d',d:'r'};   // turn left
+const DX={r:1,l:-1,u:0,d:0};
+const DY={r:0,l:0,u:-1,d:1};
+const DEG={r:90,d:180,l:270,u:0};
+
+// ─── Block definitions ───
+const BD={
+  move:{ico:'⬆️',lbl:'เดินหน้า', pcls:'pm'},
+  tl:  {ico:'↺', lbl:'เลี้ยวซ้าย',pcls:'pt'},
+  tr:  {ico:'↻', lbl:'เลี้ยวขวา',pcls:'pt'},
+  ifc: {ico:'❓',lbl:'ถ้าทางว่าง',pcls:'pc'},
+  rpt: {ico:'🔁',lbl:'ทำซ้ำ',     pcls:'pl'}
+};
+
+// ─── State ───
+let cur=0, prog=[], pos={x:0,y:0,d:'r'};
+let running=false, ctx=null;
+let done=new Set([0]);   // unlocked levels (indices)
+let cleared=new Set();  // completed levels
+
+// ─── DOM ───
+const $=id=>document.getElementById(id);
+const grid=$('grid'), pbody=$('pbody'), pcnt=$('pcnt');
+const msgEl=$('msg'), palb=$('palb'), llist=$('llist');
+const hint=$('hint');
+
+// ═══════════════════════════════════════════
+//  LOAD LEVEL
+// ═══════════════════════════════════════════
+function load(i){
+  cur=i; ctx=null;
+  const L=LV[i];
+  $('lvlt').textContent=L.title;
+  $('lvls').textContent=L.name;
+  hint.textContent=L.hint;
+
+  // Concept badges
+  const cc=$('concepts'); cc.innerHTML='';
+  const shown=new Set();
+  LV.forEach((l,j)=>{
+    if(j>i) return;
+    if(!shown.has(l.concept)){
+      shown.add(l.concept);
+      const b=document.createElement('div');
+      b.className='cbadge';
+      b.style.background=l.color+'33';
+      b.style.border='1px solid '+l.color+'66';
+      b.style.color=l.color;
+      b.textContent=l.icon+' '+l.concept;
+      cc.appendChild(b);
+    }
+  });
+
+  // Build grid
+  grid.style.gridTemplateColumns=`repeat(${L.size},var(--cs))`;
+  grid.innerHTML='';
+  for(let r=0;r<L.size;r++){
+    for(let c=0;c<L.size;c++){
+      const el=document.createElement('div');
+      el.className='cell e'+((r+c)%2);
+      el.id=`c${c}_${r}`;
+      if(L.w.some(w=>w.x===c&&w.y===r)) el.classList.add('wall');
+      else if(L.g.x===c&&L.g.y===r)     el.classList.add('goal');
+      grid.appendChild(el);
+    }
+  }
+  // Player inside grid (absolute)
+  const pl=document.createElement('div');
+  pl.id='pl'; pl.innerHTML='<div id="pli">🤖</div>';
+  grid.appendChild(pl);
+
+  pos={...L.s};
+  placePl();
+  buildPal(L.bl);
+  clearProg();
+  updatePalCtx();
+  renderSidebar();
+  renderProgress();
+  setMsg('ใส่คำสั่งแล้วกด ▶ รัน!','');
+  $('runBtn').disabled=false;
+}
+
+function cs(){
+  const c=grid.querySelector('.cell');
+  return c?c.offsetWidth:68;
+}
+
+function placePl(){
+  const p=$('pl'); if(!p) return;
+  const s=cs();
+  p.style.cssText=`left:${pos.x*s}px;top:${pos.y*s}px;width:${s}px;height:${s}px`;
+  const i=$('pli'); if(i) i.style.transform=`rotate(${DEG[pos.d]}deg)`;
+}
+
+// ═══════════════════════════════════════════
+//  PALETTE
+// ═══════════════════════════════════════════
+function buildPal(types){
+  palb.innerHTML='';
+  types.forEach(t=>{
+    const d=BD[t], b=document.createElement('button');
+    b.className='pb2 '+d.pcls;
+    b.innerHTML=`${d.ico} ${d.lbl}`;
+    b.onclick=()=>addBlock(t);
+    palb.appendChild(b);
+  });
+}
+
+// ═══════════════════════════════════════════
+//  PROGRAM BUILD
+// ═══════════════════════════════════════════
+function total(a){return a.reduce((n,b)=>n+1+(b.body?b.body.length:0),0)}
+
+function addBlock(t){
+  if(running) return;
+  if(total(prog)>=LV[cur].max){setMsg('⚠️ บล็อกเต็ม!','warn');return}
+
+  if(ctx!==null && prog[ctx]?.body!==undefined){
+    if(t==='rpt'||t==='ifc'){setMsg('⚠️ ซ้อนบล็อกพิเศษไม่ได้','warn');return}
+    prog[ctx].body.push({type:t});
+  } else {
+    if(t==='rpt') prog.push({type:'rpt',count:3,body:[]});
+    else if(t==='ifc') prog.push({type:'ifc',body:[]});
+    else prog.push({type:t});
+  }
+  renderProg();
+}
+
+function delBlock(i){if(!running){prog.splice(i,1);if(ctx===i)ctx=null;renderProg()}}
+function delSub(i,j){if(!running){prog[i].body.splice(j,1);renderProg()}}
+function setCtx(i){
+  if(i===null){ctx=null;}
+  else{ctx=(ctx===i)?null:i;}
+  renderProg();
+  updatePalCtx();
+}
+function updatePalCtx(){
+  const el=document.getElementById('pal-ctx');
+  const lbl=document.getElementById('pal-ctx-lbl');
+  if(!el||!lbl) return;
+  if(ctx!==null&&prog[ctx]){
+    const b=prog[ctx];
+    const name=b.type==='rpt'?`ทำซ้ำ ${b.count} ครั้ง`:'ถ้าทางว่าง';
+    lbl.textContent=name;
+    el.classList.add('show');
+    document.getElementById('pallbl').style.display='none';
+  } else {
+    el.classList.remove('show');
+    document.getElementById('pallbl').style.display='';
+  }
+}
+function chgCnt(i,d){const b=prog[i];if(b)b.count=Math.max(2,Math.min(8,b.count+d));renderProg()}
+
+function clearProg(){prog=[];ctx=null;renderProg();updatePalCtx();setMsg('ล้างแล้ว! ใส่คำสั่งใหม่','');}
+function resetPos(){pos={...LV[cur].s};placePl();
+  document.querySelectorAll('.pb').forEach(e=>e.classList.remove('running'));
+  setMsg('รีเซ็ตแล้ว ลองรันอีกครั้ง!','');}
+
+// ═══════════════════════════════════════════
+//  RENDER PROGRAM
+// ═══════════════════════════════════════════
+function renderProg(){
+  pbody.innerHTML='';
+  pcnt.textContent=total(prog)+' บล็อก';
+  if(!prog.length){
+    pbody.innerHTML='<div class="pempty"><span>📋</span>กดบล็อกด้านล่าง<br>เพื่อเพิ่มคำสั่ง</div>';
+    return;
+  }
+  prog.forEach((b,i)=>pbody.appendChild(mkEl(b,i)));
+}
+
+function mkEl(b,i){
+  const el=document.createElement('div');
+  const d=BD[b.type];
+  if(b.type==='rpt'||b.type==='ifc'){
+    const isC=ctx===i;
+    el.className='pb pb-'+b.type; el.id='pb'+i;
+    let hdr='';
+    if(b.type==='rpt'){
+      hdr=`<div class="pbhdr">${d.ico} ทำซ้ำ
+        <div class="rcnt">
+          <button class="cb" onclick="event.stopPropagation();chgCnt(${i},-1)">−</button>
+          <strong>${b.count}</strong>
+          <button class="cb" onclick="event.stopPropagation();chgCnt(${i},1)">+</button>
+        </div> ครั้ง
+        <button class="del" onclick="event.stopPropagation();delBlock(${i})">×</button></div>`;
+    } else {
+      hdr=`<div class="pbhdr">${d.ico} ถ้าทางว่าง → ทำ:
+        <button class="del" onclick="event.stopPropagation();delBlock(${i})">×</button></div>`;
+    }
+    const inner=(b.body.length===0
+      ?`<div class="ne">${isC?'← กดบล็อกด้านล่างเพื่อเพิ่ม':'แตะที่นี่ แล้วกดบล็อก'}</div>`
+      :b.body.map((s,j)=>`<div class="ns" onclick="event.stopPropagation();delSub(${i},${j})">
+          ${BD[s.type].ico} ${BD[s.type].lbl}
+          <span style="margin-left:auto;opacity:.5">×</span></div>`).join(''))
+      +(isC?`<button class="nz-exit" onclick="event.stopPropagation();setCtx(${i})">✓ เสร็จแล้ว — กลับโปรแกรมหลัก</button>`:'');
+    const nzClick=isC?`event.stopPropagation()`:`setCtx(${i})`;
+    el.innerHTML=hdr+`<div class="nz${isC?' ctx':''}" onclick="${nzClick}">${inner}</div>`;
+  } else {
+    el.className=`pb pb-${b.type}`;el.id='pb'+i;
+    el.innerHTML=`<span>${d.ico}</span><span>${d.lbl}</span>
+      <button class="del" onclick="event.stopPropagation();delBlock(${i})">×</button>`;
+  }
+  return el;
+}
+
+// ═══════════════════════════════════════════
+//  EXECUTION
+// ═══════════════════════════════════════════
+async function runProg(){
+  if(running) return;
+  running=true; $('runBtn').disabled=true;
+  ctx=null; renderProg(); updatePalCtx();
+  pos={...LV[cur].s}; placePl();
+  setMsg('🤖 กำลังรัน...','');
+  await sl(280);
+
+  let ok=true;
+  try{ await execList(prog,i=>i); }
+  catch(e){
+    ok=false;
+    setMsg('💥 ชนกำแพง! แก้คำสั่งแล้วลองใหม่','err');
+    const pi=$('pli');
+    if(pi){pi.classList.add('shake');setTimeout(()=>pi.classList.remove('shake'),450)}
+  }
+
+  document.querySelectorAll('.pb').forEach(e=>e.classList.remove('running'));
+  const L=LV[cur];
+  if(ok){
+    if(pos.x===L.g.x&&pos.y===L.g.y){ await doWin(); }
+    else{ setMsg('❌ ยังไม่ถึงดาว! ลองใหม่อีกครั้ง','err'); }
+  }
+  running=false; $('runBtn').disabled=false;
+}
+
+async function execList(list,getIdx){
+  for(let i=0;i<list.length;i++){
+    if(getIdx) hilite(getIdx(i));
+    await exec(list[i],getIdx?getIdx(i):-1);
+    await sl(40);
+  }
+}
+
+async function exec(b,idx){
+  switch(b.type){
+    case 'move': await doMove(); break;
+    case 'tl':   await doTurn('l'); break;
+    case 'tr':   await doTurn('r'); break;
+    case 'ifc':
+      if(clear()){
+        for(const s of(b.body||[])){hilite(idx);await exec(s,idx);await sl(40)}
+      } break;
+    case 'rpt':
+      for(let k=0;k<b.count;k++)
+        for(const s of(b.body||[])){hilite(idx);await exec(s,idx);await sl(40)}
+      break;
+  }
+}
+
+async function doMove(){
+  const L=LV[cur];
+  const nx=pos.x+DX[pos.d], ny=pos.y+DY[pos.d];
+  if(nx<0||nx>=L.size||ny<0||ny>=L.size) throw new Error('bounds');
+  if(L.w.some(w=>w.x===nx&&w.y===ny)) throw new Error('wall');
+  // Trail flicker on current cell
+  const cc=$(`c${pos.x}_${pos.y}`);
+  if(cc){cc.classList.add('lit');setTimeout(()=>cc.classList.remove('lit'),300)}
+  pos.x=nx;pos.y=ny; placePl();
+  beep(440,'square',.04,80); await sl(330);
+}
+async function doTurn(dir){
+  pos.d=dir==='r'?ROT[pos.d]:ROL[pos.d];
+  placePl(); beep(330,'sine',.03,60); await sl(210);
+}
+function clear(){
+  const L=LV[cur];
+  const nx=pos.x+DX[pos.d], ny=pos.y+DY[pos.d];
+  if(nx<0||nx>=L.size||ny<0||ny>=L.size) return false;
+  return !L.w.some(w=>w.x===nx&&w.y===ny);
+}
+function hilite(idx){
+  document.querySelectorAll('.pb').forEach(e=>e.classList.remove('running'));
+  const e=$('pb'+idx); if(e) e.classList.add('running');
+}
+
+// ═══════════════════════════════════════════
+//  WIN
+// ═══════════════════════════════════════════
+async function doWin(){
+  setMsg('🎉 ยอดเยี่ยมมาก!','ok');
+  playWin(); cleared.add(cur); done.add(cur+1);
+  const L=LV[cur];
+  const icons =['🎉','🏅','🌟','🦊','🐉','🚀','🏆','⚡','🌈','👑'];
+  const titles=[
+    'เส้นตรงสำเร็จ!','เลี้ยวสำเร็จ!','รูปตัว L สำเร็จ!',
+    'เงื่อนไขสำเร็จ!','อ้อมต้นไม้แล้ว!','บันไดซ้ำสำเร็จ!',
+    'บันไดใหญ่สำเร็จ!','กำแพงยาวผ่านแล้ว!','เขาวงกตสำเร็จ!',
+    '🔥 บอสพ่ายแพ้แล้ว!'
+  ];
+  const descs=[
+    'เข้าใจ Sequence แล้ว — การสั่งงานทีละขั้นตามลำดับ',
+    'ฝึกเลี้ยวทิศทางได้แล้ว ดีมาก!',
+    'เส้นทางซับซ้อนขึ้น แต่ก็ผ่านได้!',
+    'เข้าใจ Condition แล้ว — ตรวจสอบก่อนตัดสินใจ',
+    'ใช้เงื่อนไขอ้อมอุปสรรคได้แล้ว!',
+    'เข้าใจ Loop แล้ว — ทำซ้ำเพื่อประหยัดคำสั่ง',
+    'Loop ใหญ่กว่าก็ยังสำเร็จ สุดยอดมาก!',
+    'ผสม Condition + Sequence ได้แล้ว!',
+    'ผสมทุกแนวคิดได้อย่างเชี่ยวชาญ!',
+    'ผ่านบอสด่านสุดท้ายแล้ว! คุณคือ Programmer ตัวน้อยแล้ว! 🌟'
+  ];
+
+  $('wico').textContent=icons[cur]||'🎉';
+  $('wttl').textContent=titles[cur]||'ผ่านด่านแล้ว!';
+  $('wmsg').textContent=descs[cur]||'ดีมาก!';
+  $('wst').textContent='⭐'.repeat(cur<3?2:cur<7?3:3);
+
+  const nb=$('nxt');
+  if(cur>=LV.length-1){
+    nb.textContent='🏁 จบเกม!';
+    nb.onclick=()=>{closeWin();setMsg('🎓 คุณเรียนรู้ทุกแนวคิดแล้ว! ยอดเยี่ยมที่สุด!','ok')}
+  } else {
+    nb.textContent='ด่านถัดไป →';
+    nb.onclick=nextLvl;
+  }
+  await sl(350);
+  $('win').classList.add('show');
+  $('wbox').classList.add('pop');
+  setTimeout(()=>$('wbox').classList.remove('pop'),350);
+  renderSidebar(); renderProgress();
+}
+
+function closeWin(){$('win').classList.remove('show');resetPos()}
+function nextLvl(){ closeWin(); if(cur+1<LV.length) load(cur+1); }
+
+// ═══════════════════════════════════════════
+//  SIDEBAR + PROGRESS
+// ═══════════════════════════════════════════
+function renderSidebar(){
+  llist.innerHTML='';
+  LV.forEach((L,i)=>{
+    const locked=!done.has(i);
+    const d=document.createElement('div');
+    d.className=`lcard ${i===cur?'active':''} ${locked?'locked':''}`;
+    const ck=cleared.has(i)?'✓ ':'';
+    d.innerHTML=`<div class="lnum">${locked?'🔒 ':''}${ck}ด่าน ${L.id}</div>
+      <div class="lname">${L.name}</div>
+      <span class="ltag" style="background:${L.color}">${L.icon} ${L.concept}</span>`;
+    if(!locked) d.onclick=()=>load(i);
+    llist.appendChild(d);
+  });
+}
+
+function renderProgress(){
+  const p=$('progress'); p.innerHTML='';
+  LV.forEach((_,i)=>{
+    const d=document.createElement('div');
+    d.className='pdot'+(cleared.has(i)?' done':i===cur?' cur':'');
+    d.title='ด่าน '+(i+1);
+    p.appendChild(d);
+  });
+}
+
+// ═══════════════════════════════════════════
+//  STATUS + SOUND
+// ═══════════════════════════════════════════
+function setMsg(t,type){
+  msgEl.textContent=t;
+  msgEl.style.color=type==='err'?'var(--err)':type==='ok'?'var(--ok)':type==='warn'?'var(--star)':'var(--dim)';
+}
+
+let aC;
+function getAC(){if(!aC)aC=new(window.AudioContext||window.webkitAudioContext)();return aC}
+function beep(f,type,vol,dur){
+  try{const c=getAC(),o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);o.type=type;o.frequency.value=f;
+    g.gain.setValueAtTime(vol,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,c.currentTime+dur/1000);
+    o.start();o.stop(c.currentTime+dur/1000)}catch(e){}
+}
+function playWin(){
+  [523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,'sine',.28,260),i*120));
+}
+function sl(ms){return new Promise(r=>setTimeout(r,ms))}
+
+window.addEventListener('resize',()=>{if($('pl')) placePl()});
+
+// Click on program panel background (not on a block) → clear ctx
+pbody.addEventListener('click',e=>{
+  if(e.target===pbody){setCtx(null);}
+});
+
+// ── Boot ──
+load(0);
+</script>
+</body>
+</html>
