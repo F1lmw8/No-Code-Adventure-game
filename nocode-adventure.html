@@ -200,7 +200,9 @@ header{background:var(--surf);border-bottom:1px solid var(--border);
 
 /* Concept badge panel */
 #concepts{display:flex;gap:6px;flex-wrap:wrap;padding:6px 18px;
-  border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0}
+  background:var(--bg);flex-shrink:0}
+#ldesc{padding:8px 18px;font-size:12px;line-height:1.6;flex-shrink:0;
+  border-bottom:1px solid var(--border);white-space:pre-wrap}
 .cbadge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;
   display:flex;align-items:center;gap:4px}
 
@@ -234,7 +236,46 @@ header{background:var(--surf);border-bottom:1px solid var(--border);
   header{padding:8px 12px}
   .btn{padding:8px 12px;font-size:12px;min-height:40px}
 }
+
+/* ── Tutorial modal ── */
+#tut-ov{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;
+  display:none;align-items:center;justify-content:center;padding:16px}
+#tut-ov.show{display:flex}
+#tut-box{background:var(--surf);border:2px solid var(--cond);border-radius:18px;
+  max-width:440px;width:100%;padding:28px 24px;text-align:center;
+  animation:pop .3s ease}
+#tut-ico{font-size:54px;margin-bottom:10px}
+#tut-ttl{font-family:'Press Start 2P',monospace;font-size:9px;line-height:1.9;
+  color:var(--cond);margin-bottom:16px}
+#tut-body{font-size:13px;line-height:1.9;margin-bottom:22px;text-align:left}
+#tut-body p{margin:5px 0;padding:7px 12px;background:rgba(255,255,255,.06);
+  border-radius:8px}
+#tut-ok{background:var(--cond);color:#3A2800;border:none;border-radius:10px;
+  padding:13px 0;font-size:14px;font-weight:800;cursor:pointer;
+  font-family:'Nunito',sans-serif;width:100%;max-width:260px;
+  box-shadow:0 3px 0 rgba(0,0,0,.3)}
+#tut-ok:hover{filter:brightness(1.1)}
+/* ── Hint button + panel ── */
+#hintBtn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
+  border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;
+  color:var(--dim);font-family:'Nunito',sans-serif;touch-action:manipulation;min-height:38px;
+  transition:.15s}
+#hintBtn:hover{background:rgba(255,255,255,.16);color:var(--cond)}
+#hintBtn.active{color:var(--cond);border-color:var(--cond)}
+#hint-panel{overflow:hidden;max-height:0;transition:max-height .3s ease,padding .3s ease;
+  padding:0 18px;font-size:12px;line-height:1.9;color:#C8B8FF;
+  border-bottom:1px solid var(--border);flex-shrink:0;white-space:pre-wrap;background:rgba(255,202,40,.04)}
+#hint-panel.hp-open{max-height:100px;padding:8px 18px}
 </style>
+
+<div id="tut-ov">
+  <div id="tut-box">
+    <div id="tut-ico">❓</div>
+    <div id="tut-ttl"></div>
+    <div id="tut-body"></div>
+    <button id="tut-ok" onclick="closeTut()">เข้าใจแล้ว! ▶ เล่นเลย</button>
+  </div>
+</div>
 
 <div id="app">
 <aside>
@@ -253,11 +294,14 @@ header{background:var(--surf);border-bottom:1px solid var(--border);
     <div class="hbtns">
       <button class="btn btn-clr" onclick="clearProg()">🗑</button>
       <button class="btn btn-rst" onclick="resetPos()">↺ รีเซ็ต</button>
+      <button id="hintBtn" onclick="toggleHint()">💡 คำใบ้</button>
       <button class="btn btn-run" id="runBtn" onclick="runProg()">▶ รัน!</button>
     </div>
   </header>
 
+  <div id="hint-panel"></div>
   <div id="concepts"></div>
+  <div id="ldesc"></div>
 
   <div id="ws">
     <div id="ga">
@@ -301,6 +345,7 @@ const LV = [
     concept:'Sequence', color:'#FF7043', icon:'📋',
     size:4, s:{x:0,y:1,d:'r'}, g:{x:3,y:1}, w:[],
     bl:['move','tl','tr'], max:10,
+    desc:'🎯 โจทย์: พาหุ่นยนต์เดินตรงไปให้ถึงดาว ⭐\nใช้ได้: เดินหน้า / เลี้ยวซ้าย / เลี้ยวขวา',
     hint:'💡 กด "เดินหน้า" 3 ครั้ง แล้วกด ▶ รัน ได้เลย!' },
 
   // 2 – Sequence: เลี้ยวหนึ่งครั้ง
@@ -308,6 +353,7 @@ const LV = [
     concept:'Sequence', color:'#FF7043', icon:'📋',
     size:4, s:{x:0,y:0,d:'r'}, g:{x:3,y:3}, w:[],
     bl:['move','tl','tr'], max:12,
+    desc:'🎯 โจทย์: เดินไปถึงดาวโดยเลี้ยวมุมหนึ่งครั้ง\nใช้ได้: เดินหน้า / เลี้ยวซ้าย / เลี้ยวขวา',
     hint:'💡 เดินตรง 3 ก้าว → เลี้ยวขวา → เดินลงอีก 3 ก้าว' },
 
   // 3 – Sequence: รูปตัว L
@@ -315,35 +361,60 @@ const LV = [
     concept:'Sequence', color:'#FF7043', icon:'📋',
     size:5, s:{x:0,y:0,d:'r'}, g:{x:4,y:4}, w:[],
     bl:['move','tl','tr'], max:14,
+    desc:'🎯 โจทย์: เขียนโปรแกรมเดินเป็นรูปตัว L ไปหาดาว\nใช้ได้: เดินหน้า / เลี้ยวซ้าย / เลี้ยวขวา',
     hint:'💡 เดินขวา 4 ก้าว → เลี้ยวขวา → เดินลง 4 ก้าว' },
 
   // 4 – Condition: ต้นไม้กีดขวาง
   { id:4, title:'ด่านที่ 4', name:'ต้นไม้กีดขวาง!',
     concept:'Condition', color:'#FFCA28', icon:'❓',
-    size:5, s:{x:0,y:2,d:'r'}, g:{x:4,y:2}, w:[{x:2,y:2}],
+    size:5, s:{x:0,y:2,d:'r'}, g:{x:4,y:2},
+    w:[{x:2,y:1},{x:2,y:2},{x:2,y:3}],
     bl:['move','tl','tr','ifc'], max:14,
-    hint:'💡 "ถ้าทางว่าง" = เช็คก่อนเดิน ถ้ามีต้นไม้จะข้ามไปเลย\n→ กด "ถ้าทางว่าง" แล้วแตะใน กล่องสีเหลือง แล้วกด "เดินหน้า"' },
+    must_use:['ifc'],
+    tutorial:{ico:'❓',ttl:'ฟังก์ชันใหม่: ถ้าทางว่าง',lines:[
+      '🌳 มีต้นไม้กั้นทาง — ถ้าเดินตรงหุ่นยนต์จะชน!',
+      '💡 "ถ้าทางว่าง" = ตรวจสอบช่องข้างหน้าก่อน',
+      '✅ ช่องหน้าว่าง → ทำคำสั่งข้างในได้เลย',
+      '🚫 มีต้นไม้อยู่ → ข้ามบล็อกนั้นไปโดยไม่ crash!',
+      '→ ลองกด "ถ้าทางว่าง" แล้วใส่ "เดินหน้า" ไว้ข้างใน'
+    ]},
+    desc:'🎯 โจทย์: ต้นไม้ขวาง 3 ช่องกลาง! ต้องอ้อมโดยใช้ "ถ้าทางว่าง"\n⚠️ ด่านนี้ต้องใช้ ถ้าทางว่าง จึงจะผ่านได้',
+    hint:'💡 อ้อมต้นไม้: tl → เดิน (y=1) → tr → เดิน เดิน → tr → เดิน (y=3) → tl → เดิน\n→ ใส่ "ถ้าทางว่าง" ล้อมรอบ "เดินหน้า" แต่ละก้าว!' },
 
-  // 5 – Condition: กำแพงสองต้น
+  // 5 – Condition: อ้อมต้นไม้หลายต้น
   { id:5, title:'ด่านที่ 5', name:'อ้อมต้นไม้',
     concept:'Condition', color:'#FFCA28', icon:'❓',
-    size:5, s:{x:0,y:0,d:'r'}, g:{x:4,y:4}, w:[{x:2,y:2}],
+    size:5, s:{x:0,y:0,d:'r'}, g:{x:4,y:4},
+    w:[{x:2,y:0},{x:4,y:1},{x:1,y:2},{x:3,y:2},{x:0,y:4},{x:2,y:4}],
     bl:['move','tl','tr','ifc'], max:16,
-    hint:'💡 เดินขวา 2 ก้าว → เลี้ยวลง → ใช้ "ถ้าทางว่าง→เดิน" ตรงต้นไม้ → อ้อม → ไปหาดาว!' },
+    must_use:['ifc'],
+    desc:'🎯 โจทย์: ต้นไม้กระจายหลายจุด ต้องใช้ "ถ้าทางว่าง" นำทาง\n⚠️ ด่านนี้ต้องใช้ ถ้าทางว่าง จึงจะผ่านได้',
+    hint:'💡 ต้นไม้กระจายทั่ว ตรวจสอบด้วย "ถ้าทางว่าง" ก่อนแต่ละก้าวที่ไม่แน่ใจ!' },
 
   // 6 – Loop: บันไดซ้ำ x4
   { id:6, title:'ด่านที่ 6', name:'บันไดซ้ำ x4',
     concept:'Loop', color:'#66BB6A', icon:'🔁',
     size:5, s:{x:0,y:4,d:'r'}, g:{x:4,y:0}, w:[],
-    bl:['move','tl','tr','rpt'], max:12,
-    hint:'💡 กด "ทำซ้ำ" ตั้งเป็น 4 ครั้ง → แตะในกล่องสีเขียว → ใส่: เดิน, เลี้ยวซ้าย, เดิน, เลี้ยวขวา' },
+    bl:['move','tl','tr','rpt'], max:8,
+    must_use:['rpt'],
+    tutorial:{ico:'🔁',ttl:'ฟังก์ชันใหม่: ทำซ้ำ',lines:[
+      '📦 บันได 4 ขั้น — ต้องเดิน+เลี้ยว ซ้ำๆ 4 รอบ!',
+      '💡 "ทำซ้ำ N ครั้ง" = ทำคำสั่งนั้นซ้ำอัตโนมัติ',
+      '✨ ใส่ข้างใน: เดิน → เลี้ยวซ้าย → เดิน → เลี้ยวขวา',
+      '🔁 ตั้งค่า ทำซ้ำ 4 ครั้ง — เสร็จเลย!',
+      '⚠️ บล็อคจำกัด 8 อัน — ต้องใช้ ทำซ้ำ เท่านั้น!'
+    ]},
+    desc:'🎯 โจทย์: บันได 4 ขั้น บล็อคจำกัด 8 อัน — ต้องใช้ ทำซ้ำ!\n⚠️ ด่านนี้ต้องใช้ ทำซ้ำ จึงจะผ่านได้',
+    hint:'💡 กด "ทำซ้ำ" ตั้ง 4 ครั้ง → ข้างใน: เดิน, เลี้ยวซ้าย, เดิน, เลี้ยวขวา' },
 
   // 7 – Loop: บันไดซ้ำ x5
   { id:7, title:'ด่านที่ 7', name:'บันไดใหญ่ x5',
     concept:'Loop', color:'#66BB6A', icon:'🔁',
     size:6, s:{x:0,y:5,d:'r'}, g:{x:5,y:0}, w:[],
-    bl:['move','tl','tr','rpt'], max:12,
-    hint:'💡 เหมือนด่าน 6 แต่ใหญ่กว่า! เปลี่ยน "ทำซ้ำ" เป็น 5 ครั้ง' },
+    bl:['move','tl','tr','rpt'], max:9,
+    must_use:['rpt'],
+    desc:'🎯 โจทย์: บันได 5 ขั้น บล็อคจำกัด 9 อัน — ต้องวนลูป!\n⚠️ ด่านนี้ต้องใช้ ทำซ้ำ จึงจะผ่านได้',
+    hint:'💡 เหมือนด่าน 6 แต่ใหญ่กว่า! เปลี่ยน ทำซ้ำ เป็น 5 ครั้ง' },
 
   // 8 – All: กำแพงยาว
   { id:8, title:'ด่านที่ 8', name:'กำแพงยาว!',
@@ -351,23 +422,27 @@ const LV = [
     size:5, s:{x:0,y:2,d:'r'}, g:{x:4,y:2},
     w:[{x:2,y:0},{x:2,y:1},{x:2,y:2},{x:2,y:3}],
     bl:['move','tl','tr','ifc','rpt'], max:16,
+    desc:'🎯 โจทย์: กำแพงยาว 4 ช่อง ขวางทางตรง ต้องหาช่องโหว่อ้อม!\nใช้ได้: ทุกฟังก์ชัน',
     hint:'💡 กำแพงยาว 4 ช่อง ช่องว่างอยู่ที่แถวล่างสุด ต้องอ้อมลงไปแล้วข้ามไป!' },
 
-  // 9 – All: ต้นไม้กระจัดกระจาย (S-curve บังคับเลี้ยวหลายครั้ง)
+  // 9 – All: ต้นไม้กระจัดกระจาย
   { id:9, title:'ด่านที่ 9', name:'ต้นไม้กระจัดกระจาย',
     concept:'All', color:'#AB47BC', icon:'⚡',
     size:6, s:{x:0,y:0,d:'r'}, g:{x:5,y:5},
     w:[{x:2,y:0},{x:2,y:1},{x:2,y:2},{x:4,y:3},{x:4,y:4},{x:0,y:4},{x:2,y:5}],
     bl:['move','tl','tr','ifc','rpt'], max:18,
+    desc:'🎯 โจทย์: ต้นไม้กระจัดกระจาย ต้องเลี้ยวซ้าย-ขวาสลับกันหลายครั้ง!\nใช้ได้: ทุกฟังก์ชัน',
     hint:'💡 ต้นไม้กระจายเต็มทาง ต้องเลี้ยวซ้ายขวาสลับกันหลายครั้ง!\nใช้ "ถ้าทางว่าง" ช่วยตรวจหน้าได้เลย' },
 
-  // 10 – Boss: บันไดมีหลุม (ต้องใช้ rpt+ifc)
+  // 10 – Boss: บันไดมีกับดัก (ต้องใช้ rpt+ifc)
   { id:10, title:'ด่านที่ 10 🔥', name:'บอสด่านสุดท้าย!',
     concept:'All', color:'#EF5350', icon:'🔥',
     size:6, s:{x:0,y:5,d:'r'}, g:{x:5,y:0},
-    w:[{x:3,y:2}],
+    w:[{x:3,y:2},{x:3,y:5},{x:5,y:3}],
     bl:['move','tl','tr','ifc','rpt'], max:10,
-    hint:'💡 ใช้ ทำซ้ำ 5 ครั้ง ใส่: เดิน → เลี้ยวซ้าย → ถ้าทางว่าง{เดิน} → เลี้ยวขวา\nจากนั้นออกจาก Loop แล้ว เลี้ยวซ้าย + เดิน อีกก้าว!' }
+    must_use:['rpt','ifc'],
+    desc:'🎯 โจทย์: บอสด่านสุดท้าย! ต้องใช้ ทำซ้ำ + ถ้าทางว่าง ภายใน 10 บล็อก!\n⚠️ ต้องใช้ทั้ง ทำซ้ำ และ ถ้าทางว่าง จึงจะผ่านได้!',
+    hint:'💡 ใช้ ทำซ้ำ 5 ครั้ง ใส่: เดิน → เลี้ยวซ้าย → ถ้าทางว่าง{เดิน} → เลี้ยวขวา\nจากนั้นออกจาก Loop: เลี้ยวซ้าย + เดิน อีกก้าว!' }
 ];
 
 // ─── Direction helpers ───
@@ -391,6 +466,8 @@ let cur=0, prog=[], pos={x:0,y:0,d:'r'};
 let running=false, ctx=null;
 let done=new Set([0]);   // unlocked levels (indices)
 let cleared=new Set();  // completed levels
+let tutSeen=new Set(), _tutCb=null;  // tutorial tracking
+let _hintOpen=false;                 // hint panel state
 
 // ─── Secret unlock (คลิกโลโก้ 5 ครั้ง) ───
 let _logoClicks=0, _logoTimer=null;
@@ -420,11 +497,44 @@ const hint=$('hint');
 //  LOAD LEVEL
 // ═══════════════════════════════════════════
 function load(i){
+  // Show tutorial for new concepts (only once)
+  const L0=LV[i];
+  if(L0.tutorial && !tutSeen.has(i)){
+    tutSeen.add(i);
+    $('tut-ico').textContent=L0.tutorial.ico||'📖';
+    $('tut-ttl').textContent=L0.tutorial.ttl;
+    $('tut-body').innerHTML=L0.tutorial.lines.map(l=>`<p>${l}</p>`).join('');
+    _tutCb=()=>_loadImpl(i);
+    $('tut-ov').classList.add('show');
+    return;
+  }
+  _loadImpl(i);
+}
+function closeTut(){
+  $('tut-ov').classList.remove('show');
+  if(_tutCb){_tutCb();_tutCb=null;}
+}
+function toggleHint(){
+  _hintOpen=!_hintOpen;
+  const p=$('hint-panel'), b=$('hintBtn');
+  if(_hintOpen){p.classList.add('hp-open');b.classList.add('active');b.textContent='💡 ซ่อนคำใบ้';}
+  else{p.classList.remove('hp-open');b.classList.remove('active');b.textContent='💡 คำใบ้';}
+}
+function _loadImpl(i){
   cur=i; ctx=null;
   const L=LV[i];
   $('lvlt').textContent=L.title;
   $('lvls').textContent=L.name;
-  hint.textContent=L.hint;
+  hint.textContent=L.hint||'';
+  // Update hint panel (hidden by default on new level)
+  const hp=$('hint-panel');
+  if(hp){hp.textContent=L.hint||'';hp.classList.remove('hp-open');}
+  const hb=$('hintBtn');
+  if(hb){hb.textContent='💡 คำใบ้';hb.classList.remove('active');}
+  _hintOpen=false;
+  const ld=$('ldesc');
+  if(ld){ ld.style.background=L.color+'22'; ld.style.borderLeft='4px solid '+L.color;
+    ld.innerHTML=L.desc.split('\n').map(l=>`<span>${l}</span>`).join('<br>'); }
 
   // Concept badges
   const cc=$('concepts'); cc.innerHTML='';
@@ -678,7 +788,25 @@ function hilite(idx){
 // ═══════════════════════════════════════════
 //  WIN
 // ═══════════════════════════════════════════
+function _usesType(list,types){
+  for(const b of list){
+    if(types.includes(b.type)) return true;
+    if(b.body&&_usesType(b.body,types)) return true;
+  }
+  return false;
+}
 async function doWin(){
+  const L=LV[cur];
+  // Check must_use requirement
+  if(L.must_use){
+    const missing=L.must_use.filter(t=>!_usesType(prog,[t]));
+    if(missing.length>0){
+      const names=missing.map(t=>({ifc:'ถ้าทางว่าง',rpt:'ทำซ้ำ'}[t]||t));
+      setMsg(`💡 เกือบแล้ว! แต่ด่านนี้ต้องใช้ "${names.join('" และ "')}" — ลองใหม่อีกครั้งนะ!`,'warn');
+      const el=$('grid'); if(el){el.classList.add('shake');setTimeout(()=>el.classList.remove('shake'),500);}
+      resetPos(); return;
+    }
+  }
   setMsg('🎉 ยอดเยี่ยมมาก!','ok');
   playWin(); cleared.add(cur); done.add(cur+1);
   const L=LV[cur];
