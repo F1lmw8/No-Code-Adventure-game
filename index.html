@@ -238,7 +238,7 @@ header{background:var(--surf);border-bottom:1px solid var(--border);
 
 <div id="app">
 <aside>
-  <div class="logo">🤖 NO-CODE<br>ADVENTURE</div>
+  <div class="logo" id="logo" title="🤖 NO-CODE ADVENTURE">🤖 NO-CODE<br>ADVENTURE</div>
   <div id="llist"></div>
   <div class="tip"><strong>💡 คำใบ้</strong><div id="hint">เริ่มเล่นเลย!</div></div>
 </aside>
@@ -353,21 +353,21 @@ const LV = [
     bl:['move','tl','tr','ifc','rpt'], max:16,
     hint:'💡 กำแพงยาว 4 ช่อง ช่องว่างอยู่ที่แถวล่างสุด ต้องอ้อมลงไปแล้วข้ามไป!' },
 
-  // 9 – All: ต้นไม้แนวทแยง
-  { id:9, title:'ด่านที่ 9', name:'ต้นไม้แนวทแยง',
+  // 9 – All: ต้นไม้กระจัดกระจาย (S-curve บังคับเลี้ยวหลายครั้ง)
+  { id:9, title:'ด่านที่ 9', name:'ต้นไม้กระจัดกระจาย',
     concept:'All', color:'#AB47BC', icon:'⚡',
     size:6, s:{x:0,y:0,d:'r'}, g:{x:5,y:5},
-    w:[{x:2,y:2},{x:3,y:3},{x:4,y:4}],
-    bl:['move','tl','tr','ifc','rpt'], max:20,
-    hint:'💡 ต้นไม้เรียงแนวทแยง ใช้ "ถ้าทางว่าง" ตรวจแต่ละจุด แล้ว อ้อมทีละก้าว' },
+    w:[{x:2,y:0},{x:2,y:1},{x:2,y:2},{x:4,y:3},{x:4,y:4},{x:0,y:4},{x:2,y:5}],
+    bl:['move','tl','tr','ifc','rpt'], max:18,
+    hint:'💡 ต้นไม้กระจายเต็มทาง ต้องเลี้ยวซ้ายขวาสลับกันหลายครั้ง!\nใช้ "ถ้าทางว่าง" ช่วยตรวจหน้าได้เลย' },
 
-  // 10 – Boss: กำแพงตัดกลาง
+  // 10 – Boss: บันไดมีหลุม (ต้องใช้ rpt+ifc)
   { id:10, title:'ด่านที่ 10 🔥', name:'บอสด่านสุดท้าย!',
     concept:'All', color:'#EF5350', icon:'🔥',
-    size:7, s:{x:0,y:3,d:'r'}, g:{x:6,y:3},
-    w:[{x:3,y:1},{x:3,y:2},{x:3,y:3},{x:3,y:4},{x:3,y:5}],
-    bl:['move','tl','tr','ifc','rpt'], max:20,
-    hint:'💡 กำแพงตัดกลาง! ต้องอ้อมขึ้นบน ผ่านแถวที่ 0 แล้วลงมาที่เป้าหมาย ใช้ทำซ้ำช่วยประหยัดบล็อก!' }
+    size:6, s:{x:0,y:5,d:'r'}, g:{x:5,y:0},
+    w:[{x:3,y:2}],
+    bl:['move','tl','tr','ifc','rpt'], max:10,
+    hint:'💡 ใช้ ทำซ้ำ 5 ครั้ง ใส่: เดิน → เลี้ยวซ้าย → ถ้าทางว่าง{เดิน} → เลี้ยวขวา\nจากนั้นออกจาก Loop แล้ว เลี้ยวซ้าย + เดิน อีกก้าว!' }
 ];
 
 // ─── Direction helpers ───
@@ -391,6 +391,24 @@ let cur=0, prog=[], pos={x:0,y:0,d:'r'};
 let running=false, ctx=null;
 let done=new Set([0]);   // unlocked levels (indices)
 let cleared=new Set();  // completed levels
+
+// ─── Secret unlock (คลิกโลโก้ 5 ครั้ง) ───
+let _logoClicks=0, _logoTimer=null;
+document.addEventListener('DOMContentLoaded',()=>{
+  const logo=document.getElementById('logo');
+  if(logo) logo.addEventListener('click',()=>{
+    _logoClicks++;
+    clearTimeout(_logoTimer);
+    _logoTimer=setTimeout(()=>_logoClicks=0,2000);
+    if(_logoClicks>=5){
+      _logoClicks=0;
+      LV.forEach((_,i)=>done.add(i));
+      renderSidebar(); renderProgress();
+      const m=document.getElementById('msg');
+      if(m){m.textContent='🔓 ปลดล็อกทุกด่านแล้ว!';m.style.color='var(--ok)';}
+    }
+  });
+});
 
 // ─── DOM ───
 const $=id=>document.getElementById(id);
