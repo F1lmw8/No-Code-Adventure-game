@@ -672,7 +672,9 @@ function updatePalCtx(){
   const lbl=document.getElementById('pal-ctx-lbl');
   if(!el||!lbl) return;
   if(subctx!==null&&ctx!==null&&prog[ctx]?.body[subctx]){
-    lbl.textContent='ถ้าทางว่าง';
+    const rptB=prog[ctx];
+    const rptName=rptB.type==='rpt'?`ทำซ้ำ ${rptB.count} ครั้ง`:'ทำซ้ำ';
+    lbl.textContent=rptName+' › ถ้าทางว่าง';
     el.classList.add('show');
     document.getElementById('pallbl').style.display='none';
   } else if(ctx!==null&&prog[ctx]){
@@ -699,6 +701,23 @@ function resetPos(){pos={...LV[cur].s};placePl();
 function renderProg(){
   pbody.innerHTML='';
   pcnt.textContent=total(prog)+' บล็อก';
+  // drill-down: แสดง body ของ ifc ที่อยู่ใน rpt
+  if(ctx!==null && subctx!==null && prog[ctx]?.body[subctx]){
+    const ifcBdy=prog[ctx].body[subctx].body||[];
+    if(!ifcBdy.length){
+      pbody.innerHTML='<div class="pempty"><span>?</span>กดบล็อกด้านล่าง<br>เพื่อเพิ่มในถ้าทางว่าง</div>';
+    } else {
+      ifcBdy.forEach((b,k)=>{
+        const el=document.createElement('div');
+        const d=BD[b.type];
+        el.className=`pb pb-${b.type}`;
+        el.innerHTML=`<span>${d.ico}</span><span>${d.lbl}</span>
+          <button class="del" onclick="event.stopPropagation();delSubSub(${ctx},${subctx},${k})">×</button>`;
+        pbody.appendChild(el);
+      });
+    }
+    return;
+  }
   if(!prog.length){
     pbody.innerHTML='<div class="pempty"><span>📋</span>กดบล็อกด้านล่าง<br>เพื่อเพิ่มคำสั่ง</div>';
     return;
@@ -730,12 +749,10 @@ function mkEl(b,i){
       :b.body.map((s,j)=>{
         if(s.type==='ifc'&&b.type==='rpt'){
           const isSub=subctx===j;
-          const ifcInner=s.body.length===0
-            ?`<div class="ne">${isSub?'← กดบล็อกด้านล่างเพื่อเพิ่ม':'แตะที่นี่ แล้วกดบล็อก'}</div>`
-            :s.body.map((ss,k)=>`<div class="ns" onclick="event.stopPropagation();delSubSub(${i},${j},${k})">${BD[ss.type].ico} ${BD[ss.type].lbl}<span style="margin-left:auto;opacity:.5">×</span></div>`).join('');
-          const ifcExit=isSub?`<button class="nz-exit" onclick="event.stopPropagation();exitCtx()">✓ เสร็จแล้ว</button>`:'';
-          const ifcClick=isSub?'event.stopPropagation()':`setSubCtx(${i},${j})`;
-          return `<div class="pb pb-ifc" style="margin:4px 0;border-radius:10px" onclick="event.stopPropagation()"><div class="pbhdr">? ถ้าทางว่าง → ทำ:<button class="del" onclick="event.stopPropagation();delSub(${i},${j})">×</button></div><div class="nz${isSub?' ctx':''}" onclick="${ifcClick}">${ifcInner}${ifcExit}</div></div>`;
+          const cnt=s.body.length;
+          const badge=cnt>0?` <span style="font-size:13px;opacity:.7">(${cnt} บล็อก)</span>`:'<span style="font-size:13px;opacity:.5"> ว่างอยู่</span>';
+          const arrow=`<span style="margin-left:auto;font-size:18px;opacity:.7">›</span>`;
+          return `<div class="ns" style="background:${isSub?'rgba(167,139,250,.25)':'rgba(167,139,250,.1)'};border:1.5px solid #a78bfa;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:8px" onclick="event.stopPropagation();setSubCtx(${i},${j})">? ถ้าทางว่าง${badge}${arrow}<button class="del" onclick="event.stopPropagation();delSub(${i},${j})">×</button></div>`;
         }
         return `<div class="ns" onclick="event.stopPropagation();delSub(${i},${j})">${BD[s.type].ico} ${BD[s.type].lbl}<span style="margin-left:auto;opacity:.5">×</span></div>`;
       }).join(''))
