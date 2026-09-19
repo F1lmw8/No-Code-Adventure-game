@@ -641,7 +641,7 @@ function addBlock(t){
     const parentType=prog[ctx]?.type;
     if(t==='rpt'){setMsg('⚠️ ซ้อนบล็อกพิเศษไม่ได้','warn');return}
     if(t==='ifc'&&parentType!=='rpt'){setMsg('⚠️ ใส่ ถ้าทางว่าง ได้แค่ใน ทำซ้ำ','warn');return}
-    prog[ctx].body.push({type:t});
+    prog[ctx].body.push(t==='ifc'?{type:'ifc',body:[]}:{type:t});
   } else {
     if(t==='rpt') prog.push({type:'rpt',count:3,body:[]});
     else if(t==='ifc') prog.push({type:'ifc',body:[]});
@@ -749,7 +749,7 @@ function mkEl(b,i){
       :b.body.map((s,j)=>{
         if(s.type==='ifc'&&b.type==='rpt'){
           const isSub=subctx===j;
-          const cnt=s.body.length;
+          const cnt=(s.body||[]).length;
           const badge=cnt>0?` <span style="font-size:13px;opacity:.7">(${cnt} บล็อก)</span>`:'<span style="font-size:13px;opacity:.5"> ว่างอยู่</span>';
           const arrow=`<span style="margin-left:auto;font-size:18px;opacity:.7">›</span>`;
           return `<div class="ns" style="background:${isSub?'rgba(167,139,250,.25)':'rgba(167,139,250,.1)'};border:1.5px solid #a78bfa;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:8px" onclick="event.stopPropagation();setSubCtx(${i},${j})">? ถ้าทางว่าง${badge}${arrow}<button class="del" onclick="event.stopPropagation();delSub(${i},${j})">×</button></div>`;
