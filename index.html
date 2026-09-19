@@ -633,7 +633,7 @@ function addBlock(t){
   if(ctx!==null && subctx!==null && prog[ctx]?.body[subctx]?.body!==undefined){
     if(t==='rpt'||t==='ifc'){setMsg('⚠️ ซ้อนบล็อกพิเศษไม่ได้','warn');return}
     prog[ctx].body[subctx].body.push({type:t});
-    renderProg(); return;
+    renderProg(); updatePalCtx(); return;
   }
 
   if(ctx!==null && prog[ctx]?.body!==undefined){
@@ -654,8 +654,7 @@ function delBlock(i){if(!running){prog.splice(i,1);if(ctx===i)ctx=null;renderPro
 function delSub(i,j){if(!running){prog[i].body.splice(j,1);if(subctx===j)subctx=null;renderProg()}}
 function delSubSub(i,j,k){if(!running){prog[i].body[j].body.splice(k,1);renderProg()}}
 function setSubCtx(i,j){
-  if(ctx===i&&subctx===j){subctx=null;}
-  else{ctx=i;subctx=j;}
+  ctx=i; subctx=j;
   renderProg();updatePalCtx();
 }
 function exitCtx(){
@@ -729,12 +728,12 @@ function mkEl(b,i){
     const inner=(b.body.length===0
       ?`<div class="ne">${isC?'← กดบล็อกด้านล่างเพื่อเพิ่ม':'แตะที่นี่ แล้วกดบล็อก'}</div>`
       :b.body.map((s,j)=>{
-        if(s.type==='ifc'&&b.type==='rpt'&&isC){
+        if(s.type==='ifc'&&b.type==='rpt'){
           const isSub=subctx===j;
           const ifcInner=s.body.length===0
             ?`<div class="ne">${isSub?'← กดบล็อกด้านล่างเพื่อเพิ่ม':'แตะที่นี่ แล้วกดบล็อก'}</div>`
             :s.body.map((ss,k)=>`<div class="ns" onclick="event.stopPropagation();delSubSub(${i},${j},${k})">${BD[ss.type].ico} ${BD[ss.type].lbl}<span style="margin-left:auto;opacity:.5">×</span></div>`).join('');
-          const ifcExit=isSub?`<button class="nz-exit" onclick="event.stopPropagation();setSubCtx(${i},${j})">✓ เสร็จแล้ว</button>`:'';
+          const ifcExit=isSub?`<button class="nz-exit" onclick="event.stopPropagation();exitCtx()">✓ เสร็จแล้ว</button>`:'';
           const ifcClick=isSub?'event.stopPropagation()':`setSubCtx(${i},${j})`;
           return `<div class="pb pb-ifc" style="margin:4px 0;border-radius:10px" onclick="event.stopPropagation()"><div class="pbhdr">? ถ้าทางว่าง → ทำ:<button class="del" onclick="event.stopPropagation();delSub(${i},${j})">×</button></div><div class="nz${isSub?' ctx':''}" onclick="${ifcClick}">${ifcInner}${ifcExit}</div></div>`;
         }
