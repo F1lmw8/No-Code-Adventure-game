@@ -229,12 +229,24 @@ header{background:var(--surf);border-bottom:1px solid var(--border);
   #ga{padding:10px;gap:8px}
   #pal{padding:8px 12px;padding-bottom:max(8px,env(safe-area-inset-bottom));min-height:64px}
   .pb2{padding:10px 12px;font-size:12px;min-height:46px}
+  /* Header mobile layout: ย้าย progress dots ไปบรรทัดล่าง */
+  header{flex-wrap:wrap;gap:6px;padding:8px 12px}
+  #progress{order:10;flex:0 0 100%;justify-content:center;gap:5px}
+  .pdot{width:9px;height:9px}
+  .hbtns{gap:6px;margin-left:auto}
+  #hintBtn{white-space:nowrap;padding:6px 10px;font-size:11px;min-height:36px}
+  .btn{padding:8px 12px;font-size:12px;min-height:38px}
+  #lvlt{font-size:7px}
+  #concepts{padding:5px 12px}
+  #ldesc{padding:6px 12px;font-size:11px}
 }
 @media(max-width:420px){
   :root{--cs:44px}
   .pb2{padding:8px 10px;font-size:11px}
-  header{padding:8px 12px}
-  .btn{padding:8px 12px;font-size:12px;min-height:40px}
+  header{padding:6px 10px}
+  .btn{padding:7px 10px;font-size:11px;min-height:36px}
+  #hintBtn{padding:5px 8px;font-size:10px}
+  .btn-clr{padding:7px 10px}
 }
 
 /* ── Tutorial modal ── */
@@ -618,7 +630,10 @@ function addBlock(t){
   if(total(prog)>=LV[cur].max){setMsg('⚠️ บล็อกเต็ม!','warn');return}
 
   if(ctx!==null && prog[ctx]?.body!==undefined){
-    if(t==='rpt'||t==='ifc'){setMsg('⚠️ ซ้อนบล็อกพิเศษไม่ได้','warn');return}
+    // อนุญาต ifc ใน rpt แต่ไม่ให้ซ้อน rpt ใน rpt/ifc หรือ ifc ใน ifc
+    const parentType=prog[ctx]?.type;
+    if(t==='rpt'){setMsg('⚠️ ซ้อนบล็อกพิเศษไม่ได้','warn');return}
+    if(t==='ifc'&&parentType!=='rpt'){setMsg('⚠️ ใส่ ถ้าทางว่าง ได้แค่ใน ทำซ้ำ','warn');return}
     prog[ctx].body.push({type:t});
   } else {
     if(t==='rpt') prog.push({type:'rpt',count:3,body:[]});
