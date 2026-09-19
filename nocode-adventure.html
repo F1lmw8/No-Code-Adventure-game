@@ -328,7 +328,7 @@ header{background:var(--surf);border-bottom:1px solid var(--border);
 
   <div id="pal">
     <span id="pallbl">คำสั่ง:</span>
-    <div id="pal-ctx">📦 เพิ่มใน: <span id="pal-ctx-lbl">บล็อก</span> <button onclick="setCtx(null)">✓ ออก</button></div>
+    <div id="pal-ctx">📦 เพิ่มใน: <span id="pal-ctx-lbl">บล็อก</span> <button onclick="exitCtx()">✓ ออก</button></div>
     <div id="palb"></div>
   </div>
 </div>
@@ -475,7 +475,7 @@ const BD={
 
 // ─── State ───
 let cur=0, prog=[], pos={x:0,y:0,d:'r'};
-let running=false, ctx=null;
+let running=false, ctx=null, subctx=null;
 let done=new Set([0]);   // unlocked levels (indices)
 let cleared=new Set();  // completed levels
 let tutSeen=new Set(), _tutCb=null;  // tutorial tracking
@@ -629,6 +629,13 @@ function addBlock(t){
   if(running) return;
   if(total(prog)>=LV[cur].max){setMsg('⚠️ บล็อกเต็ม!','warn');return}
 
+  // เพิ่มบล็อกใน ifc ที่อยู่ข้างใน rpt
+  if(ctx!==null && subctx!==null && prog[ctx]?.body[subctx]?.body!==undefined){
+    if(t==='rpt'||t==='ifc'){setMsg('⚠️ ซ้อนบล็อกพิเศษไม่ได้','warn');return}
+    prog[ctx].body[subctx].body.push({type:t});
+    renderProg(); return;
+  }
+
   if(ctx!==null && prog[ctx]?.body!==undefined){
     // อนุญาต ifc ใน rpt แต่ไม่ให้ซ้อน rpt ใน rpt/ifc หรือ ifc ใน ifc
     const parentType=prog[ctx]?.type;
@@ -644,10 +651,20 @@ function addBlock(t){
 }
 
 function delBlock(i){if(!running){prog.splice(i,1);if(ctx===i)ctx=null;renderProg()}}
-function delSub(i,j){if(!running){prog[i].body.splice(j,1);renderProg()}}
+function delSub(i,j){if(!running){prog[i].body.splice(j,1);if(subctx===j)subctx=null;renderProg()}}
+function delSubSub(i,j,k){if(!running){prog[i].body[j].body.splice(k,1);renderProg()}}
+function setSubCtx(i,j){
+  if(ctx===i&&subctx===j){subctx=null;}
+  else{ctx=i;subctx=j;}
+  renderProg();updatePalCtx();
+}
+function exitCtx(){
+  if(subctx!==null){subctx=null;renderProg();updatePalCtx();}
+  else{setCtx(null);}
+}
 function setCtx(i){
-  if(i===null){ctx=null;}
-  else{ctx=(ctx===i)?null:i;}
+  if(i===null){ctx=null;subctx=null;}
+  else{if(ctx!==i)subctx=null;ctx=(ctx===i)?null:i;}
   renderProg();
   updatePalCtx();
 }
@@ -655,7 +672,11 @@ function updatePalCtx(){
   const el=document.getElementById('pal-ctx');
   const lbl=document.getElementById('pal-ctx-lbl');
   if(!el||!lbl) return;
-  if(ctx!==null&&prog[ctx]){
+  if(subctx!==null&&ctx!==null&&prog[ctx]?.body[subctx]){
+    lbl.textContent='ถ้าทางว่าง';
+    el.classList.add('show');
+    document.getElementById('pallbl').style.display='none';
+  } else if(ctx!==null&&prog[ctx]){
     const b=prog[ctx];
     const name=b.type==='rpt'?`ทำซ้ำ ${b.count} ครั้ง`:'ถ้าทางว่าง';
     lbl.textContent=name;
@@ -707,9 +728,18 @@ function mkEl(b,i){
     }
     const inner=(b.body.length===0
       ?`<div class="ne">${isC?'← กดบล็อกด้านล่างเพื่อเพิ่ม':'แตะที่นี่ แล้วกดบล็อก'}</div>`
-      :b.body.map((s,j)=>`<div class="ns" onclick="event.stopPropagation();delSub(${i},${j})">
-          ${BD[s.type].ico} ${BD[s.type].lbl}
-          <span style="margin-left:auto;opacity:.5">×</span></div>`).join(''))
+      :b.body.map((s,j)=>{
+        if(s.type==='ifc'&&b.type==='rpt'&&isC){
+          const isSub=subctx===j;
+          const ifcInner=s.body.length===0
+            ?`<div class="ne">${isSub?'← กดบล็อกด้านล่างเพื่อเพิ่ม':'แตะที่นี่ แล้วกดบล็อก'}</div>`
+            :s.body.map((ss,k)=>`<div class="ns" onclick="event.stopPropagation();delSubSub(${i},${j},${k})">${BD[ss.type].ico} ${BD[ss.type].lbl}<span style="margin-left:auto;opacity:.5">×</span></div>`).join('');
+          const ifcExit=isSub?`<button class="nz-exit" onclick="event.stopPropagation();setSubCtx(${i},${j})">✓ เสร็จแล้ว</button>`:'';
+          const ifcClick=isSub?'event.stopPropagation()':`setSubCtx(${i},${j})`;
+          return `<div class="pb pb-ifc" style="margin:4px 0;border-radius:10px" onclick="event.stopPropagation()"><div class="pbhdr">? ถ้าทางว่าง → ทำ:<button class="del" onclick="event.stopPropagation();delSub(${i},${j})">×</button></div><div class="nz${isSub?' ctx':''}" onclick="${ifcClick}">${ifcInner}${ifcExit}</div></div>`;
+        }
+        return `<div class="ns" onclick="event.stopPropagation();delSub(${i},${j})">${BD[s.type].ico} ${BD[s.type].lbl}<span style="margin-left:auto;opacity:.5">×</span></div>`;
+      }).join(''))
       +(isC?`<button class="nz-exit" onclick="event.stopPropagation();setCtx(${i})">✓ เสร็จแล้ว — กลับโปรแกรมหลัก</button>`:'');
     const nzClick=isC?`event.stopPropagation()`:`setCtx(${i})`;
     el.innerHTML=hdr+`<div class="nz${isC?' ctx':''}" onclick="${nzClick}">${inner}</div>`;
